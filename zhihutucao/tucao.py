@@ -1,8 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding:utf-8 -*-
 
-import requests
-from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 
 HEADERS = {
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.67 Safari/537.36'
@@ -10,39 +9,26 @@ HEADERS = {
 URL = 'https://daily.zhihu.com'
 
 def get_requests(url,**kargs):
-    req = requests.get(url,**kargs)
-    return req.text
+    session = HTMLSession()
+    req = session.get(url,**kargs)
+    return req.html
 
 
 def get_tucao_url(html):
-    soup = BeautifulSoup(html,'html.parser')
-    tucao_url = soup.select('.title')
-    url = []
-    for i in tucao_url:
-        if '吐槽' in i.string:
-            url.append(i.parent['href'])
+    tucao_url = html.find('a',containing='吐槽')
+    url = [i.attrs['href'] for i in tucao_url ]
     return url
 
 
 def get_tucao_content(html):
-    soup = BeautifulSoup(html,'html.parser')
-    tucao_content = soup.select('.question')
-    for i,c in enumerate(tucao_content):
-        print('吐槽' + str(i+1) +':' + c.h2.string)
-        print('--' * (len(c.h2.string) + 5))
-        for i in c.select('.answer'):
-            print('作者: ' + i.span.string)
-            print(parse_answer(i.select('.content')))
-        print('=' * 100)
+    tucao_content = html.find('.question')
+    for i in tucao_content:
+        print(i.text)
+        b = i.find('a')
+        print(b[0].attrs['href'])
+        print('--' * 25)
 
 
-def parse_answer(content):
-    answer = str(content)
-    answer = answer.replace('<p>','')
-    answer = answer.replace('</p>','')
-    answer = answer.replace('[<div class="content">','')
-    answer = answer.replace('</div>]','')
-    return answer
 
 def main():
     index_content = get_requests(URL,headers=HEADERS)
@@ -51,7 +37,6 @@ def main():
         for i in tucao_url:
             url = URL + i
             print(url)
-            print('=' * 100)
             tucao_content = get_requests(url,headers=HEADERS)
             get_tucao_content(tucao_content)
 
